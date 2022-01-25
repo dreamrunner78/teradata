@@ -1,0 +1,5 @@
+Tdpid='192.168.1.22',
+LogonMech='TD2',
+Usrid='dbc',
+Psswd='dbc',
+File1='FILELIST.TXT'

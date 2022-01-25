@@ -1,0 +1,78 @@
+DEFINE JOB edw_wa_tbls_ELEC_ADDR_ACTIVE_ACCTS_STREAM
+(
+DEFINE OPERATOR STREAMOperator 
+DESCRIPTION ‘TWB STREAM Operator’
+TYPE STREAM
+SCHEMA *
+ATTRIBUTES
+(
+VARCHAR UserName = ‘xxxx’,
+VARCHAR UserPassword = ‘xxxxxe12’,
+VARCHAR TdpId = ‘xxxxxx’,
+VARCHAR AccountID,
+VARCHAR LogTable = ‘edw_wa_tbls.ELEC_ADDR_ACTIVE_ACCTS_log’,
+VARCHAR ARRAY TargetTable = [ ‘edw_wa_tbls.ELEC_ADDR_ACTIVE_ACCTS’],
+VARCHAR ARRAY ErrorTable1 = [ ‘edw_wa_tbls.ET_ELEC_ADDR_ACTIVE_ACCTS’],
+VARCHAR ARRAY ErrorTable2 = [ ‘edw_wa_tbls.UV_ELEC_ADDR_ACTIVE_ACCTS’],
+VARCHAR ARRAY WorkTable = [ ‘edw_wa_tbls.WT_ELEC_ADDR_ACTIVE_ACCTS’],
+VARCHAR AmpCheck,
+VARCHAR PauseAcq,
+INTEGER ErrorLimit,
+INTEGER MaxSessions = 16,
+INTEGER MinSessions = 2,
+INTEGER TenacityHours = 4,
+INTEGER TenacitySleep = 4,
+VARCHAR DeleteTask ,
+VARCHAR NotifyMethod,
+VARCHAR NotifyLevel,
+VARCHAR NotifyString,
+VARCHAR NotifyExit,
+VARCHAR NotifyExitIsDLL
+);
+DEFINE SCHEMA ELEC_ADDR_ACTIVE_ACCTS_layout 
+( 
+ACCT_ID varchar(11),
+ACCT_NO varchar(35)
+);
+DEFINE OPERATOR DataConnectorOperator 
+DESCRIPTION ‘Teradata Warehouse Builder DataConnector Operator’
+TYPE DATACONNECTOR PRODUCER
+SCHEMA ELEC_ADDR_ACTIVE_ACCTS_layout
+ATTRIBUTES
+(
+VARCHAR OpenMode = ‘Read’,
+VARCHAR IndicatorMode,
+VARCHAR DirectoryPath,
+VARCHAR FileName,
+VARCHAR Format,
+VARCHAR TextDelimiter,
+VARCHAR AccessModuleName,
+VARCHAR AccessModuleInitStr
+);
+APPLY
+(
+‘UPDATE edw_wa_tbls.ELEC_ADDR_ACTIVE_ACCTS SET 
+ACCT_ID = COALESCE (ACCT_ID,:ACCT_ID) ,
+WHERE
+ACCT_NO = :ACCT_NO 
+;’
+,’INSERT INTO edw_wa_tbls.ELEC_ADDR_ACTIVE_ACCTS (
+ACCT_ID,
+ACCT_NO
+) VALUES (
+:ACCT_ID,
+:ACCT_NO
+);’
+)
+INSERT FOR MISSING UPDATE ROWS
+IGNORE MISSING UPDATE ROWS
+TO OPERATOR ( STREAMOperator )
+SELECT * FROM OPERATOR (
+DataConnectorOperator ATTR (
+TextDelimiter = ‘|’,
+Format = ‘Delimited’,
+FileName = ‘*’,
+DirectoryPath=’./ELEC_ADDR_ACTIVE_ACCTS’
+)
+);
+);
